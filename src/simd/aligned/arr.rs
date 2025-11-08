@@ -46,6 +46,50 @@ where
     vector: [T; N],
 }
 
+impl<T, const N: usize, const LANES: usize> PartialEq<SimdSlice<T, LANES>> for Simd<T, N, LANES>
+where
+    T: SimdElement + Primitive,
+    LaneCount<LANES>: SupportedLaneCount,
+    [T; LANES]: AlignedSimd<[T; LANES], T, LANES> + NonAssociativeSimd<[T; LANES], T, LANES>,
+{
+    fn eq(&self, other: &SimdSlice<T, LANES>) -> bool {
+        other.eq(self)
+    }
+}
+
+impl<T, const N: usize, const LANES: usize> PartialEq<SimdSlice<T, LANES>> for &Simd<T, N, LANES>
+where
+    T: SimdElement + Primitive,
+    LaneCount<LANES>: SupportedLaneCount,
+    [T; LANES]: AlignedSimd<[T; LANES], T, LANES> + NonAssociativeSimd<[T; LANES], T, LANES>,
+{
+    fn eq(&self, other: &SimdSlice<T, LANES>) -> bool {
+        other.eq(*self)
+    }
+}
+
+impl<T, const N: usize, const LANES: usize> PartialEq<SimdSlice<T, LANES>> for &mut Simd<T, N, LANES>
+where
+    T: SimdElement + Primitive,
+    LaneCount<LANES>: SupportedLaneCount,
+    [T; LANES]: AlignedSimd<[T; LANES], T, LANES> + NonAssociativeSimd<[T; LANES], T, LANES>,
+{
+    fn eq(&self, other: &SimdSlice<T, LANES>) -> bool {
+        other.eq(*self)
+    }
+}
+
+impl<T, const N: usize, const LANES: usize> PartialEq<&mut SimdSlice<T, LANES>> for Simd<T, N, LANES>
+where
+    T: SimdElement + Primitive,
+    LaneCount<LANES>: SupportedLaneCount,
+    [T; LANES]: AlignedSimd<[T; LANES], T, LANES> + NonAssociativeSimd<[T; LANES], T, LANES>,
+{
+    fn eq(&self, other: &&mut SimdSlice<T, LANES>) -> bool {
+        other.eq(self)
+    }
+}
+
 impl<T, const N: usize, const LANES: usize> Clone for Simd<T, N, LANES>
 where
     T: SimdElement + Primitive,
@@ -73,13 +117,7 @@ where
 
     #[inline(always)]
     fn index(&self, index: Range<usize>) -> &Self::Output {
-        let len = index.end.wrapping_sub(index.start);
-        let start = index.start & self.len();
-        let len = len & self.len();
-
-        let ptr = unsafe { self.as_ptr().add(start) };
-
-        unsafe { SimdSlice::from_raw_parts(ptr, len) }
+        SimdSlice::from_slice(&self.vector[index])
     }
 }
 
@@ -91,13 +129,7 @@ where
 {
     #[inline(always)]
     fn index_mut(&mut self, index: Range<usize>) -> &mut Self::Output {
-        let len = index.end.wrapping_sub(index.start);
-        let start = index.start & self.len();
-        let len = len & self.len();
-
-        let ptr = unsafe { self.as_mut_ptr().add(start) };
-
-        unsafe { SimdSlice::from_raw_parts_mut(ptr, len) }
+        SimdSlice::from_slice_mut(&mut self.vector[index])
     }
 }
 
@@ -111,12 +143,7 @@ where
 
     #[inline(always)]
     fn index(&self, index: RangeFrom<usize>) -> &Self::Output {
-        let start = index.start & self.len();
-        let len = self.len().wrapping_sub(start) & self.len();
-
-        let ptr = unsafe { self.as_ptr().add(start) };
-
-        unsafe { SimdSlice::from_raw_parts(ptr, len) }
+        SimdSlice::from_slice(&self.vector[index])
     }
 }
 
@@ -128,12 +155,7 @@ where
 {
     #[inline(always)]
     fn index_mut(&mut self, index: RangeFrom<usize>) -> &mut Self::Output {
-        let start = index.start & self.len();
-        let len = self.len().wrapping_sub(start) & self.len();
-
-        let ptr = unsafe { self.as_mut_ptr().add(start) };
-
-        unsafe { SimdSlice::from_raw_parts_mut(ptr, len) }
+        SimdSlice::from_slice_mut(&mut self.vector[index])
     }
 }
 
@@ -173,13 +195,7 @@ where
 
     #[inline(always)]
     fn index(&self, index: RangeInclusive<usize>) -> &Self::Output {
-        let len = (index.end().wrapping_add(1)).wrapping_sub(*index.start());
-        let start = *index.start() & self.len();
-        let len = len & self.len();
-
-        let ptr = unsafe { self.as_ptr().add(start) };
-
-        unsafe { SimdSlice::from_raw_parts(ptr, len) }
+        SimdSlice::from_slice(&self.vector[index])
     }
 }
 
@@ -191,13 +207,7 @@ where
 {
     #[inline(always)]
     fn index_mut(&mut self, index: RangeInclusive<usize>) -> &mut Self::Output {
-        let len = (index.end().wrapping_add(1)).wrapping_sub(*index.start());
-        let start = *index.start() & self.len();
-        let len = len & self.len();
-
-        let ptr = unsafe { self.as_mut_ptr().add(start) };
-
-        unsafe { SimdSlice::from_raw_parts_mut(ptr, len) }
+        SimdSlice::from_slice_mut(&mut self.vector[index])
     }
 }
 
@@ -211,11 +221,7 @@ where
 
     #[inline(always)]
     fn index(&self, index: RangeTo<usize>) -> &Self::Output {
-        let len = index.end & self.len();
-
-        let ptr = self.as_ptr();
-
-        unsafe { SimdSlice::from_raw_parts(ptr, len) }
+        SimdSlice::from_slice(&self.vector[index])
     }
 }
 
@@ -227,11 +233,7 @@ where
 {
     #[inline(always)]
     fn index_mut(&mut self, index: RangeTo<usize>) -> &mut Self::Output {
-        let len = index.end & self.len();
-
-        let ptr = self.as_mut_ptr();
-
-        unsafe { SimdSlice::from_raw_parts_mut(ptr, len) }
+        SimdSlice::from_slice_mut(&mut self.vector[index])
     }
 }
 
@@ -245,11 +247,7 @@ where
 
     #[inline(always)]
     fn index(&self, index: RangeToInclusive<usize>) -> &Self::Output {
-        let len = (index.end.wrapping_add(1)) & self.len();
-
-        let ptr = self.as_ptr();
-
-        unsafe { SimdSlice::from_raw_parts(ptr, len) }
+        SimdSlice::from_slice(&self.vector[index])
     }
 }
 
@@ -261,11 +259,7 @@ where
 {
     #[inline(always)]
     fn index_mut(&mut self, index: RangeToInclusive<usize>) -> &mut Self::Output {
-        let len = (index.end.wrapping_add(1)) & self.len();
-
-        let ptr = self.as_mut_ptr();
-
-        unsafe { SimdSlice::from_raw_parts_mut(ptr, len) }
+        SimdSlice::from_slice_mut(&mut self.vector[index])
     }
 }
 

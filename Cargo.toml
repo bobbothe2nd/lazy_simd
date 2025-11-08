@@ -1,7 +1,7 @@
 [package]
 name = "lazy_simd"
 description = "Trait based SIMD acceleration and safe abstraction"
-version = "0.1.0"
+version = "0.1.1"
 rust-version = "1.83"
 edition = "2021"
 license = "MIT"
@@ -21,7 +21,6 @@ opt-level = 3
 [profile.release]
 opt-level = 3
 codegen-units = 1
-lto = "fat" # offers further improvements if using aligned simd::Simd wrapper
 
 [profile.release.package.'*']
 opt-level = 3

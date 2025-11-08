@@ -45,6 +45,50 @@ where
     }
 }
 
+impl<T, const N: usize, const LANES: usize> PartialEq<Simd<T, N, LANES>> for &SimdSlice<T, LANES>
+where
+    T: SimdElement + Primitive,
+    LaneCount<LANES>: SupportedLaneCount,
+    [T; LANES]: NonAssociativeSimd<[T; LANES], T, LANES> + AlignedSimd<[T; LANES], T, LANES>,
+{
+    fn eq(&self, other: &Simd<T, N, LANES>) -> bool {
+        (*self).eq(&other[..])
+    }
+}
+
+impl<T, const N: usize, const LANES: usize> PartialEq<Simd<T, N, LANES>> for &mut SimdSlice<T, LANES>
+where
+    T: SimdElement + Primitive,
+    LaneCount<LANES>: SupportedLaneCount,
+    [T; LANES]: NonAssociativeSimd<[T; LANES], T, LANES> + AlignedSimd<[T; LANES], T, LANES>,
+{
+    fn eq(&self, other: &Simd<T, N, LANES>) -> bool {
+        (**self).eq(&other[..])
+    }
+}
+
+impl<T, const N: usize, const LANES: usize> PartialEq<&Simd<T, N, LANES>> for SimdSlice<T, LANES>
+where
+    T: SimdElement + Primitive,
+    LaneCount<LANES>: SupportedLaneCount,
+    [T; LANES]: NonAssociativeSimd<[T; LANES], T, LANES> + AlignedSimd<[T; LANES], T, LANES>,
+{
+    fn eq(&self, other: &&Simd<T, N, LANES>) -> bool {
+        self.eq(&other[..])
+    }
+}
+
+impl<T, const N: usize, const LANES: usize> PartialEq<&mut Simd<T, N, LANES>> for SimdSlice<T, LANES>
+where
+    T: SimdElement + Primitive,
+    LaneCount<LANES>: SupportedLaneCount,
+    [T; LANES]: NonAssociativeSimd<[T; LANES], T, LANES> + AlignedSimd<[T; LANES], T, LANES>,
+{
+    fn eq(&self, other: &&mut Simd<T, N, LANES>) -> bool {
+        self.eq(&other[..])
+    }
+}
+
 impl<T, const LANES: usize> Index<usize> for SimdSlice<T, LANES>
 where
     T: SimdElement + Primitive,
@@ -78,13 +122,7 @@ where
     type Output = Self;
 
     fn index(&self, index: Range<usize>) -> &Self::Output {
-        let len = index.end.wrapping_sub(index.start);
-        let start = index.start % self.len();
-        let len = len % self.len();
-
-        let ptr = unsafe { self.as_ptr().add(start) };
-
-        unsafe { Self::from_raw_parts(ptr, len) }
+        Self::from_slice(&self.vector[index])
     }
 }
 
@@ -95,13 +133,7 @@ where
     [T; LANES]: NonAssociativeSimd<[T; LANES], T, LANES>,
 {
     fn index_mut(&mut self, index: Range<usize>) -> &mut Self::Output {
-        let len = index.end.wrapping_sub(index.start);
-        let start = index.start % self.len();
-        let len = len % self.len();
-
-        let ptr = unsafe { self.as_mut_ptr().add(start) };
-
-        unsafe { Self::from_raw_parts_mut(ptr, len) }
+        Self::from_slice_mut(&mut self.vector[index])
     }
 }
 
@@ -114,12 +146,7 @@ where
     type Output = Self;
 
     fn index(&self, index: RangeFrom<usize>) -> &Self::Output {
-        let start = index.start % self.len();
-        let len = self.len().wrapping_sub(start) % self.len();
-
-        let ptr = unsafe { self.as_ptr().add(start) };
-
-        unsafe { Self::from_raw_parts(ptr, len) }
+        Self::from_slice(&self.vector[index])
     }
 }
 
@@ -130,12 +157,7 @@ where
     [T; LANES]: NonAssociativeSimd<[T; LANES], T, LANES>,
 {
     fn index_mut(&mut self, index: RangeFrom<usize>) -> &mut Self::Output {
-        let start = index.start % self.len();
-        let len = self.len().wrapping_sub(start) % self.len();
-
-        let ptr = unsafe { self.as_mut_ptr().add(start) };
-
-        unsafe { Self::from_raw_parts_mut(ptr, len) }
+        Self::from_slice_mut(&mut self.vector[index])
     }
 }
 
@@ -172,13 +194,7 @@ where
     type Output = Self;
 
     fn index(&self, index: RangeInclusive<usize>) -> &Self::Output {
-        let len = (index.end().wrapping_add(1)).wrapping_sub(*index.start());
-        let start = *index.start() % self.len();
-        let len = len % self.len();
-
-        let ptr = unsafe { self.as_ptr().add(start) };
-
-        unsafe { Self::from_raw_parts(ptr, len) }
+        Self::from_slice(&self.vector[index])
     }
 }
 
@@ -189,13 +205,7 @@ where
     [T; LANES]: NonAssociativeSimd<[T; LANES], T, LANES>,
 {
     fn index_mut(&mut self, index: RangeInclusive<usize>) -> &mut Self::Output {
-        let len = (index.end().wrapping_add(1)).wrapping_sub(*index.start());
-        let start = *index.start() % self.len();
-        let len = len % self.len();
-
-        let ptr = unsafe { self.as_mut_ptr().add(start) };
-
-        unsafe { Self::from_raw_parts_mut(ptr, len) }
+        Self::from_slice_mut(&mut self.vector[index])
     }
 }
 
@@ -208,11 +218,7 @@ where
     type Output = Self;
 
     fn index(&self, index: RangeTo<usize>) -> &Self::Output {
-        let len = index.end % self.len();
-
-        let ptr = self.as_ptr();
-
-        unsafe { Self::from_raw_parts(ptr, len) }
+        Self::from_slice(&self.vector[index])
     }
 }
 
@@ -223,11 +229,7 @@ where
     [T; LANES]: NonAssociativeSimd<[T; LANES], T, LANES>,
 {
     fn index_mut(&mut self, index: RangeTo<usize>) -> &mut Self::Output {
-        let len = index.end % self.len();
-
-        let ptr = self.as_mut_ptr();
-
-        unsafe { Self::from_raw_parts_mut(ptr, len) }
+        Self::from_slice_mut(&mut self.vector[index])
     }
 }
 
@@ -240,11 +242,7 @@ where
     type Output = Self;
 
     fn index(&self, index: RangeToInclusive<usize>) -> &Self::Output {
-        let len = (index.end.wrapping_add(1)) % self.len();
-
-        let ptr = self.as_ptr();
-
-        unsafe { Self::from_raw_parts(ptr, len) }
+        Self::from_slice(&self.vector[index])
     }
 }
 
@@ -255,11 +253,7 @@ where
     [T; LANES]: NonAssociativeSimd<[T; LANES], T, LANES>,
 {
     fn index_mut(&mut self, index: RangeToInclusive<usize>) -> &mut Self::Output {
-        let len = (index.end.wrapping_add(1)) % self.len();
-
-        let ptr = self.as_mut_ptr();
-
-        unsafe { Self::from_raw_parts_mut(ptr, len) }
+        Self::from_slice_mut(&mut self.vector[index])
     }
 }
 
@@ -299,6 +293,8 @@ where
     /// Variant of [`Self::from_raw_parts`] that operates on a mutable pointer.
     ///
     /// # Safety
+    ///
+    /// This has the same safety preconditions as [`core::slice::from_raw_parts_mut`].
     ///
     /// Details are included in the immutable counterpart.
     pub const unsafe fn from_raw_parts_mut<'a>(ptr: *mut T, len: usize) -> &'a mut Self {
@@ -592,17 +588,17 @@ mod tests {
     #[test]
     fn self_as_output() {
         let mut simd = Simd::new([5.0; 128]);
-        let expected: Simd<f64, 128, 4> = Simd::new([[15.0; 64], [5.0; 64]].flatten());
+        let expected: Simd<f64, 128> = Simd::new([[[15.0; 32], [6.0; 32]].flatten(), [5.0; 64]].flatten());
         let data = {
             let a = &Simd::new([2.0; 64])[..];
-            let b = &mut Simd::new([0.0; 128])[..];
-            let out = &mut simd[64..];
+            let b = &mut Simd::new([1.0; 128])[..];
+            let out = &mut simd[..];
 
             a.mul_into(&5.0, &mut b[..64]);
-            out.add(&b);
+            out[..64].add(&b[32..96]);
 
             out
         };
-        assert_eq!(data, &expected[..]);
+        assert_eq!(expected, data);
     }
 }
