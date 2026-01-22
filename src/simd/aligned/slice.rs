@@ -56,7 +56,8 @@ where
     }
 }
 
-impl<T, const N: usize, const LANES: usize> PartialEq<Simd<T, N, LANES>> for &mut SimdSlice<T, LANES>
+impl<T, const N: usize, const LANES: usize> PartialEq<Simd<T, N, LANES>>
+    for &mut SimdSlice<T, LANES>
 where
     T: SimdElement + Primitive,
     LaneCount<LANES>: SupportedLaneCount,
@@ -78,7 +79,8 @@ where
     }
 }
 
-impl<T, const N: usize, const LANES: usize> PartialEq<&mut Simd<T, N, LANES>> for SimdSlice<T, LANES>
+impl<T, const N: usize, const LANES: usize> PartialEq<&mut Simd<T, N, LANES>>
+    for SimdSlice<T, LANES>
 where
     T: SimdElement + Primitive,
     LaneCount<LANES>: SupportedLaneCount,
@@ -588,7 +590,8 @@ mod tests {
     #[test]
     fn self_as_output() {
         let mut simd = Simd::new([5.0; 128]);
-        let expected: Simd<f64, 128> = Simd::new([[[15.0; 32], [6.0; 32]].flatten(), [5.0; 64]].flatten());
+        let expected: Simd<f64, 128> =
+            Simd::new([[[15.0; 32], [6.0; 32]].flatten(), [5.0; 64]].flatten());
         let data = {
             let a = &Simd::new([2.0; 64])[..];
             let b = &mut Simd::new([1.0; 128])[..];

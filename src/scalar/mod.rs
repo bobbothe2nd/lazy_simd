@@ -3,11 +3,83 @@
 use core::{
     mem::{ManuallyDrop, MaybeUninit},
     num::{
-        NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize, Wrapping
-    }, ptr::copy_nonoverlapping,
+        NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
+        NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Wrapping,
+    },
+    ops::{Deref, DerefMut},
+    ptr::copy_nonoverlapping,
 };
 
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
+
 use crate::simd::SimdScalar;
+
+/// Make something implement [`Primitive`] even if foreign.
+///
+/// This is useful if you want to flatten an array of arrays to still be of arrays.
+/// For example: `[[Primordial<[T; X]>; Y]; Z]` -> `[Primordial<T; X]>; N]`. It
+/// works as an atomic unit that cannot be broken down further.
+#[derive(Debug, Default, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Primordial<T> {
+    inner: T,
+}
+
+impl<T> Primordial<T> {
+    /// Construct a new primordial structure.
+    pub const fn new(inner: T) -> Self {
+        Self { inner }
+    }
+
+    /// Reference the inner value.
+    pub const fn as_inner(&self) -> &T {
+        &self.inner
+    }
+
+    /// Mutably reference the inner value.
+    pub const fn as_mut_inner(&mut self) -> &mut T {
+        &mut self.inner
+    }
+
+    /// Unwrap the inner value.
+    pub fn into_inner(self) -> T {
+        self.inner
+    }
+
+    /// Unwrap the inner value of a [`Copy`] type (no [`Drop`]).
+    pub const fn copy_inner(self) -> T
+    where
+        T: Copy,
+    {
+        self.inner
+    }
+}
+
+impl<T> Deref for Primordial<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_inner()
+    }
+}
+
+impl<T> DerefMut for Primordial<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_mut_inner()
+    }
+}
+
+impl<T> AsRef<T> for Primordial<T> {
+    fn as_ref(&self) -> &T {
+        self.as_inner()
+    }
+}
+
+impl<T> AsMut<T> for Primordial<T> {
+    fn as_mut(&mut self) -> &mut T {
+        self.as_mut_inner()
+    }
+}
 
 /// Enables addiion without consumption of data.
 ///
@@ -105,7 +177,7 @@ pub trait ImplicitSubsetOf<T: ?Sized> {}
 
 impl<S, T: ImplicitSupersetOf<S>> ImplicitSubsetOf<T> for S {}
 
-/// A marker trait for types that are not nested and use little orq no indirection.
+/// A marker trait for types that are not nested and use little or no indirection.
 pub trait Primitive {}
 
 macro_rules! transparent_impl {
@@ -117,6 +189,8 @@ macro_rules! transparent_impl {
 }
 
 transparent_impl!(Primitive, MaybeUninit, ManuallyDrop, Wrapping);
+
+impl<T> Primitive for Primordial<T> {}
 
 impl Primitive for () {}
 impl Primitive for bool {}
@@ -419,6 +493,13 @@ impl<T: Copy + Default + Primitive, const X: usize, const Y: usize, const Z: usi
     }
 }
 
+#[cfg(feature = "alloc")]
+impl<T: Clone> ArrayOf<T> for Vec<T> {
+    fn pad_to(slice: &[T]) -> Self {
+        slice.into()
+    }
+}
+
 /// Trait that allows for flattenning deeply nested types into simple arrays.
 pub trait Flatten<T, A: SupersetOf<T> + ImplicitSubsetOf<Self>>: ArrayOf<T> {
     /// Performs the flattenning operation.
@@ -459,7 +540,10 @@ impl<
 {
     fn flatten(self) -> [T; N] {
         const {
-            assert!((X * Y * Z) == N, "input arrays have invalid size for output");
+            assert!(
+                (X * Y * Z) == N,
+                "input arrays have invalid size for output"
+            );
         }
 
         let mut out = [T::default(); N];

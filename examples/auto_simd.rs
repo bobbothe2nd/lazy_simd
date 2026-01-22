@@ -1,7 +1,10 @@
 // right now, the `plain arithmetic` test greatly outperforms `Simd`...
 
 use core::array::from_fn;
-use lazy_simd::{scalar::AddByRef, simd::{Simd, add_arrays}};
+use lazy_simd::{
+    scalar::AddByRef,
+    simd::{add_arrays, Simd},
+};
 use std::time::Instant;
 
 const LENGTH: usize = 1 << 14;

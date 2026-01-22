@@ -71,9 +71,9 @@ impl SupportedLaneCount for LaneCount<4> {}
 impl SupportedLaneCount for LaneCount<8> {}
 
 /// Represents a scalar that can be copied and is expected for a SIMD register.
-pub trait SimdElement: SimdScalar + Copy {}
+pub trait SimdElement: SimdScalar + Copy + Default {}
 
-impl<T: SimdScalar + Copy> SimdElement for T {}
+impl<T: SimdScalar + Copy + Default> SimdElement for T {}
 
 impl backend::NonAssociativeSimd<[f32; 1], f32, 1> for [f32; 1] {
     type Backend = backend::SinglePrecisionNoSimd<1>;

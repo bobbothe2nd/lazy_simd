@@ -60,7 +60,7 @@ pub const MAX_SIMD_DOUBLE_PRECISION_LANES: usize =
     if cfg!(all(target_arch = "x86_64", target_feature = "avx512f")) {
         8 // f64x8
     } else if cfg!(all(target_arch = "x86_64", target_feature = "avx")) {
-        4 // f32x4
+        4 // f64x4
     } else if cfg!(any(
         all(target_arch = "x86_64", target_feature = "sse"),
         all(target_arch = "aarch64", target_feature = "neon")

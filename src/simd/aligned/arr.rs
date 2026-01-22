@@ -1,3 +1,9 @@
+use super::{SimdAligned, SimdSlice};
+use crate::scalar::{AddByRef, DivByRef, MulByRef, Primitive, SubByRef, SupersetOf};
+use crate::simd::{
+    backend::{self, AlignedSimd, NonAssociativeSimd},
+    LaneCount, SimdElement, SupportedLaneCount,
+};
 use core::{
     array::TryFromSliceError,
     mem::MaybeUninit,
@@ -8,12 +14,6 @@ use core::{
     ptr::from_ref,
 };
 use num_traits::{Inv, MulAdd, One, Zero};
-use crate::scalar::{AddByRef, DivByRef, MulByRef, Primitive, SubByRef, SupersetOf};
-use crate::simd::{
-    backend::{self, AlignedSimd, NonAssociativeSimd},
-    LaneCount, SimdElement, SupportedLaneCount,
-};
-use super::{SimdAligned, SimdSlice};
 
 pub struct TryFromUnalignedError;
 
@@ -68,7 +68,8 @@ where
     }
 }
 
-impl<T, const N: usize, const LANES: usize> PartialEq<SimdSlice<T, LANES>> for &mut Simd<T, N, LANES>
+impl<T, const N: usize, const LANES: usize> PartialEq<SimdSlice<T, LANES>>
+    for &mut Simd<T, N, LANES>
 where
     T: SimdElement + Primitive,
     LaneCount<LANES>: SupportedLaneCount,
@@ -79,7 +80,8 @@ where
     }
 }
 
-impl<T, const N: usize, const LANES: usize> PartialEq<&mut SimdSlice<T, LANES>> for Simd<T, N, LANES>
+impl<T, const N: usize, const LANES: usize> PartialEq<&mut SimdSlice<T, LANES>>
+    for Simd<T, N, LANES>
 where
     T: SimdElement + Primitive,
     LaneCount<LANES>: SupportedLaneCount,
@@ -98,12 +100,7 @@ where
 {
     #[inline(always)]
     fn clone(&self) -> Self {
-        Self::new(*self.as_array())
-    }
-
-    #[inline(always)]
-    fn clone_from(&mut self, source: &Self) {
-        self.vector = *source.as_array();
+        *self
     }
 }
 
@@ -392,9 +389,7 @@ where
     /// Constructs a new vector from an array and copies it to ensure alignment.
     #[inline(always)]
     pub const fn new(vector: [T; N]) -> Self {
-        Self {
-            vector: vector,
-        }
+        Self { vector: vector }
     }
 
     /// Constructs a new vector by copying `scalar` `N` times.
